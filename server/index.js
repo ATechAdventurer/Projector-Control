@@ -16,7 +16,7 @@ app.get("/api", (req, res) => {
     const data = faces.map(({operations}) => {
         return operations;
     })
-    res.json(faces[0].operations);
+    res.json(data || []);
 })
 
 // Routing
@@ -24,15 +24,18 @@ app.use(express.static(path.join(__dirname, "../", "web")));
 
 io.on('connection', (socket) => {
     console.log("Connected");
-    //const unusedFace = faces.findIndex((item) => item === undefined);
-    const unusedFace = 0;
+    const unusedFace = faces.findIndex((item) => item === undefined);
+    //const unusedFace = 0;
     if (typeof faces[unusedFace >= 0 ? unusedFace : 0] !== "object") {
         faces[unusedFace >= 0 ? unusedFace : 0] = {};
         faces[unusedFace >= 0 ? unusedFace : 0].participants = [socket.id];
         faces[unusedFace >= 0 ? unusedFace : 0].operations = [];
         //socket.currentPageIndex = unusedFace >= 0 ? unusedFace : 0;
     }
-    socket.emit("goTo", { pageIndex: unusedFace >= 0 ? unusedFace : 0, operations: faces[unusedFace].operations });
+    setTimeout(() => {
+        socket.emit("goTo", { pageIndex: unusedFace >= 0 ? unusedFace : 0, operations: faces[unusedFace].operations || [] });
+    }, 100);
+    
     socket.on("newOperation", ({ pageIndex, operation }) => {
         if (typeof faces[pageIndex] !== "object") {
             socket.currentPageIndex = pageIndex;
@@ -43,5 +46,22 @@ io.on('connection', (socket) => {
             faces[pageIndex].operations.push(operation);
         }
         io.emit("peerOperation", {pageIndex, operation, authorId: socket.id})
+    })
+
+    socket.on("iGoTo", ({currentPage, direction}) => {
+        
+        let newPage;
+        if(direction === "next"){
+            newPage = (currentPage + 1) % faces.length; 
+        }else{
+            if(currentPage <= 0){
+                newPage = faces.length-1;
+            }else{
+                newPage = (currentPage - 1) % faces.length;
+            }
+            
+        }
+        socket.emit("goTo", { pageIndex: newPage, operations: faces[unusedFace].operations || []});
+
     })
 });
