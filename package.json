@@ -1,0 +1,24 @@
+{
+  "name": "Projector-Control",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ATechAdventurer/Projector-Control.git"
+  },
+  "keywords": [],
+  "author": "Cameron Steele (ATechAdventurer)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ATechAdventurer/Projector-Control/issues"
+  },
+  "homepage": "https://github.com/ATechAdventurer/Projector-Control#readme",
+  "dependencies": {
+    "express": "^4.17.1",
+    "socket.io": "^4.0.1"
+  }
+}
