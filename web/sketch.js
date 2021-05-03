@@ -16,7 +16,8 @@ let state = {
     },
     selectedColor: [46, 157, 26],
     mode: 0,
-    page: 0
+    page: 0,
+    text: ""
 };
 
 const brushes = [
@@ -24,9 +25,7 @@ const brushes = [
     "Square",
     "Star",
     "Polygon",
-    "Text",
-    "Fill",
-    "Clear"
+    "Text"
 ];
 
 function preload() {
@@ -35,14 +34,12 @@ function preload() {
 
 function setup() {
     createCanvas(1920, 1080);
-    //colorMode(HSB);
     textAlign(CENTER);
     ogPoints.push(width / 2);
     ogPoints.push((height / 12) * 2 - 100);
     triangleShape.push(createVector(ogPoints[0], ogPoints[1] - 25));
     triangleShape.push(createVector(ogPoints[0] + triangleOffsets[0] + 25, ogPoints[1] + triangleOffsets[1] + 15));
     triangleShape.push(createVector(ogPoints[0] - triangleOffsets[0] - 25, ogPoints[1] + triangleOffsets[1] + 15));
-    //console.log(triangleShape);
     lButtonSideLengths.push(createVector(4 * (width / 12) - 60, 5 * (height / 12)));
     lButtonSideLengths.push(createVector(4 * (width / 12) - 25, 5 * (height / 12) + 25));
     lButtonSideLengths.push(createVector(4 * (width / 12) - 25, 5 * (height / 12) - 25))
@@ -55,7 +52,7 @@ function setup() {
         console.log(operations)
         console.log("Moved to ", pageIndex);
         state.page = pageIndex;
-        background(230,230,230,255);
+        background(230, 230, 230, 255);
         drawUI(false, true);
         operations.forEach(operation => {
             console.log("Attempting to render old session")
@@ -90,9 +87,7 @@ function drawUI(redraw = false, newCanvas = false) {
     }
 
     triangle(lButtonSideLengths[0].x, lButtonSideLengths[0].y, lButtonSideLengths[1].x, lButtonSideLengths[1].y, lButtonSideLengths[2].x, lButtonSideLengths[2].y);
-
     triangle(rButtonSideLengths[0].x, rButtonSideLengths[0].y, rButtonSideLengths[1].x, rButtonSideLengths[1].y, rButtonSideLengths[2].x, rButtonSideLengths[2].y);
-
     triangle(
         ogPoints[0],
         ogPoints[1],
@@ -101,8 +96,6 @@ function drawUI(redraw = false, newCanvas = false) {
         ogPoints[0] - triangleOffsets[0],
         ogPoints[1] + triangleOffsets[1]
     );
-
-
     const storeLength = dist(
         ogPoints[0] + (2 * (triangleOffsets[0] / 3)),
         ogPoints[1] + triangleOffsets[1],
@@ -122,9 +115,16 @@ function drawUI(redraw = false, newCanvas = false) {
     const itemWidth = min(maxItemWidth, storeHeight);
     brushes.forEach((item, index) => {
         fill(255);
-        stroke(0);
+        if(state.mode === index){
+            strokeWeight(4);
+            stroke(0,0,100);
+        }else{
+            strokeWeight(1);
+            stroke(0);
+        }
         rect(storeStart.x + (itemWidth * index), storeStart.y, itemWidth, storeHeight);
         fill(state.selectedColor);
+        strokeWeight(1);
         stroke(state.selectedColor);
         switch (item) {
             case "Circle":
@@ -139,7 +139,19 @@ function drawUI(redraw = false, newCanvas = false) {
             case "Star":
                 star(storeStart.x + (itemWidth * index) + (itemWidth / 2), storeStart.y + (storeHeight / 2), min(state.cursorSize, 24) * (3 / 7), min(state.cursorSize, 24), 5);
                 break;
+            case "Polygon":
+                polygon(storeStart.x + (itemWidth * index) + (itemWidth / 2), storeStart.y + (storeHeight / 2), min(state.cursorSize, 24), 5);
+                break;
+            case "Text":
+                textAlign(CENTER);
+                text("T", storeStart.x + (itemWidth * index) + (itemWidth / 2), storeStart.y + (storeHeight / 2) + 15);
+                break;
         }
+        fill(0,0,0);
+        stroke(0,0,0);
+        textSize(15);
+        strokeWeight(1);
+        text(index+1, storeStart.x + (itemWidth * index) + (itemWidth / 2), storeStart.y + (storeHeight / 2) + 45);
         fill(255);
         stroke(0);
     });
@@ -228,18 +240,27 @@ function mouseWheel(event) {
 }
 
 function keyPressed() {
-    console.log(state.cursorSize);
-    //console.log(btoa(JSON.stringify(operations)));
+    const buttons = [49, 50, 51, 52, 53];
+    if (buttons.includes(keyCode)) {
+        console.log("Found")
+        const brushIndex = keyCode - 49;
+        if(state.mode === brushIndex){
+            return;
+        }
+        if(brushIndex === 4){
+            state.text = prompt("Enter Text Here");
+        }
+        state.mode = brushIndex;
+        drawUI(true, false);
+    }
 }
 
 function brush(button) {
-    //console.log(button)
     if (collidePointPoly(mouseX, mouseY, triangleShape)) { // Drawing
         const renderColor = button == 1 ? state.selectedColor : [255, 255, 255];
         fill(...renderColor);
         stroke(...renderColor);
-        //operations.push();
-        socket.emit("newOperation", { pageIndex: state.page, operation: { type: state.mode, w: state.cursorSize, h: state.cursorSize, drawFill: renderColor, pos: [mouseX, mouseY] } });
+        socket.emit("newOperation", { pageIndex: state.page, operation: { type: state.mode, w: state.cursorSize, h: state.cursorSize, drawFill: renderColor, pos: [mouseX, mouseY], textData: state.text }});
         switch (state.mode) {
             case 0: //circle
                 ellipse(mouseX, mouseY, state.cursorSize);
@@ -250,13 +271,19 @@ function brush(button) {
             case 2:
                 star(mouseX, mouseY, state.cursorSize * (3 / 7), state.cursorSize, 5);
                 break;
+            case 3:
+                polygon(mouseX, mouseY, state.cursorSize, 5);
+                break;
+            case 4:
+                textSize(state.cursorSize);
+                textAlign(CENTER);
+                text(state.text, mouseX, mouseY);
+                break;
         }
     }
-
 }
 
-function renderOperation({ type, w, h, drawFill, pos }) {
-    //console.log(button)
+function renderOperation({ type, w, h, drawFill, pos, textData }) {
     fill(...drawFill);
     stroke(...drawFill);
     switch (type) {
@@ -269,11 +296,16 @@ function renderOperation({ type, w, h, drawFill, pos }) {
         case 2:
             star(pos[0], pos[1], w * (3 / 7), w, 5);
             break;
+        case 3:
+            polygon(pos[0], pos[1], w, 5);
+            break;
+        case 4:
+            textAlign(CENTER);
+            text(textData, pos[0], pos[1]);
+            break;
     }
-    fill(255,255,255,255);
-
+    fill(255, 255, 255, 255);
 }
-
 
 function star(x, y, radius1, radius2, npoints) {
     let angle = TWO_PI / npoints;
