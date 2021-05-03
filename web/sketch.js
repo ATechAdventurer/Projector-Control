@@ -258,9 +258,10 @@ function keyPressed() {
 function brush(button) {
     if (collidePointPoly(mouseX, mouseY, triangleShape)) { // Drawing
         const renderColor = button == 1 ? state.selectedColor : [255, 255, 255];
+        const erase = button != 1;
         fill(...renderColor);
         stroke(...renderColor);
-        socket.emit("newOperation", { pageIndex: state.page, operation: { type: state.mode, w: state.cursorSize, h: state.cursorSize, drawFill: renderColor, pos: [mouseX, mouseY], textData: state.text }});
+        socket.emit("newOperation", { pageIndex: state.page, operation: { type: state.mode, w: state.cursorSize, h: state.cursorSize, drawFill: renderColor, pos: [mouseX, mouseY], textData: state.text, erase }});
         switch (state.mode) {
             case 0: //circle
                 ellipse(mouseX, mouseY, state.cursorSize);

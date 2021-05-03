@@ -40,8 +40,15 @@ void draw() {
             int h = draw.getInt("h");
             JSONArray pos = draw.getJSONArray("pos");
             JSONArray fill = draw.getJSONArray("drawFill");
-            canvas[f].fill(fill.getInt(0), fill.getInt(1), fill.getInt(2));
-            canvas[f].stroke(fill.getInt(0), fill.getInt(1), fill.getInt(2));
+            
+            if(!draw.getBoolean("erase")){
+              canvas[f].fill(fill.getInt(0), fill.getInt(1), fill.getInt(2));
+              canvas[f].stroke(fill.getInt(0), fill.getInt(1), fill.getInt(2));
+            }else{
+              canvas[f].fill(0,0,0);
+              canvas[f].stroke(0,0,0);
+            }
+            
             switch(type) {
             case 0:
               canvas[f].ellipse(pos.getInt(0), pos.getInt(1), w, h);
@@ -50,7 +57,7 @@ void draw() {
               canvas[f].rect(pos.getInt(0), pos.getInt(1), w, w);
               break;
             case 2:
-              star(canvas[f], pos.getInt(0), pos.getInt(1), w * (3 / 7), w, 5);
+              star(canvas[f], pos.getInt(0), pos.getInt(1), w * (7/ 3), w, 5);
               break;
             case 3:
               polygon(canvas[f], pos.getInt(0), pos.getInt(1), w, 5);
