@@ -11,7 +11,7 @@ let operations = [];
 let state = {
     cursorSize: 20,
     debug: {
-        grids: true,
+        grids: !true,
         touchBox: !true
     },
     selectedColor: [46, 157, 26],
@@ -42,6 +42,7 @@ function setup() {
     triangleShape.push(createVector(ogPoints[0], ogPoints[1] - 25));
     triangleShape.push(createVector(ogPoints[0] + triangleOffsets[0] + 25, ogPoints[1] + triangleOffsets[1] + 15));
     triangleShape.push(createVector(ogPoints[0] - triangleOffsets[0] - 25, ogPoints[1] + triangleOffsets[1] + 15));
+    //console.log(triangleShape);
     lButtonSideLengths.push(createVector(4 * (width / 12) - 60, 5 * (height / 12)));
     lButtonSideLengths.push(createVector(4 * (width / 12) - 25, 5 * (height / 12) + 25));
     lButtonSideLengths.push(createVector(4 * (width / 12) - 25, 5 * (height / 12) - 25))
@@ -49,12 +50,13 @@ function setup() {
     rButtonSideLengths.push(createVector(8 * (width / 12) - 25, 5 * (height / 12) + 25));
     rButtonSideLengths.push(createVector(8 * (width / 12) - 25, 5 * (height / 12) - 25));
     background(220);
-    drawUI();
+    drawUI(true);
     socket.on("goTo", ({ pageIndex, operations }) => {
-        console.log("got Go TO")
+        console.log(operations)
+        console.log("Moved to ", pageIndex);
         state.page = pageIndex;
-        state.operations = operations;
-        drawUI(operations.length == 0, true);
+        background(230,230,230,255);
+        drawUI(false, true);
         operations.forEach(operation => {
             console.log("Attempting to render old session")
             renderOperation(operation);
@@ -63,16 +65,16 @@ function setup() {
 
     socket.on("peerOperation", ({ pageIndex, operation, authorId }) => {
         if (socket.id === authorId || pageIndex !== state.page) {
-            console.log("Ignoring message");
-        } else {
-            renderOperation(operation)
+            return;
         }
+        renderOperation(operation)
+
     })
 
 }
 
 function drawUI(redraw = false, newCanvas = false) {
-    if(newCanvas){
+    if (newCanvas) {
         background(220);
     }
     noStroke();
@@ -192,16 +194,16 @@ function drawUI(redraw = false, newCanvas = false) {
 function mousePressed(event) {
     if (event.buttons == 4) {
         state.selectedColor = get(mouseX, mouseY);
-        drawUI(true);
+        drawUI(true, false);
         return;
     }
     if (event.buttons == 1) {
-        if(collidePointPoly(mouseX, mouseY, lButtonSideLengths)) {
-            socket.emit("iGoTo", {currentPage: state.page, direction: "prev"})
+        if (collidePointPoly(mouseX, mouseY, lButtonSideLengths)) {
+            socket.emit("iGoTo", { currentPage: state.page, direction: "prev" })
             return;
         }
-        if(collidePointPoly(mouseX, mouseY, rButtonSideLengths)){
-            socket.emit("iGoTo", {currentPage: state.page, direction: "next"})
+        if (collidePointPoly(mouseX, mouseY, rButtonSideLengths)) {
+            socket.emit("iGoTo", { currentPage: state.page, direction: "next" })
             return;
         }
 
@@ -255,21 +257,20 @@ function brush(button) {
 
 function renderOperation({ type, w, h, drawFill, pos }) {
     //console.log(button)
-    if (collidePointPoly(pos[0], pos[1], triangleShape)) { // Drawing
-        fill(...drawFill);
-        stroke(...drawFill);
-        switch (type) {
-            case 0: //circle
-                ellipse(pos[0], pos[1], w);
-                break;
-            case 1:
-                rect(pos[0], pos[1], w, w);
-                break;
-            case 2:
-                star(pos[0], pos[1], w * (3 / 7), w, 5);
-                break;
-        }
+    fill(...drawFill);
+    stroke(...drawFill);
+    switch (type) {
+        case 0: //circle
+            ellipse(pos[0], pos[1], w);
+            break;
+        case 1:
+            rect(pos[0], pos[1], w, w);
+            break;
+        case 2:
+            star(pos[0], pos[1], w * (3 / 7), w, 5);
+            break;
     }
+    fill(255,255,255,255);
 
 }
 
