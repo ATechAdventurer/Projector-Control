@@ -2,6 +2,8 @@
 const socket = io();
 const triangleOffsets = [450, 750];
 const triangleShape = [];
+const lButtonSideLengths = [];
+const rButtonSideLengths = [];
 
 document.body.onmousedown = function (e) { if (e.button === 1) return false; }
 let ogPoints = [];
@@ -9,7 +11,7 @@ let operations = [];
 let state = {
     cursorSize: 20,
     debug: {
-        grids: !true,
+        grids: true,
         touchBox: !true
     },
     selectedColor: [46, 157, 26],
@@ -40,31 +42,55 @@ function setup() {
     triangleShape.push(createVector(ogPoints[0], ogPoints[1] - 25));
     triangleShape.push(createVector(ogPoints[0] + triangleOffsets[0] + 25, ogPoints[1] + triangleOffsets[1] + 15));
     triangleShape.push(createVector(ogPoints[0] - triangleOffsets[0] - 25, ogPoints[1] + triangleOffsets[1] + 15));
+    lButtonSideLengths.push(createVector(4 * (width / 12) - 60, 5 * (height / 12)));
+    lButtonSideLengths.push(createVector(4 * (width / 12) - 25, 5 * (height / 12) + 25));
+    lButtonSideLengths.push(createVector(4 * (width / 12) - 25, 5 * (height / 12) - 25))
+    rButtonSideLengths.push(createVector(8 * (width / 12) + (25 / 2), 5 * (height / 12)));
+    rButtonSideLengths.push(createVector(8 * (width / 12) - 25, 5 * (height / 12) + 25));
+    rButtonSideLengths.push(createVector(8 * (width / 12) - 25, 5 * (height / 12) - 25));
     background(220);
     drawUI();
-    socket.on("goTo", ({pageIndex, operations}) => {
+    socket.on("goTo", ({ pageIndex, operations }) => {
+        console.log("got Go TO")
         state.page = pageIndex;
-        state.operations = [];
-        drawUI(operations.length !== 0);
+        state.operations = operations;
+        drawUI(operations.length == 0, true);
+        operations.forEach(operation => {
+            console.log("Attempting to render old session")
+            renderOperation(operation);
+        })
     });
 
-    socket.on("peerOperation", ({pageIndex, operation, authorId}) => {
-        if(socket.id === authorId || pageIndex !== state.page){
+    socket.on("peerOperation", ({ pageIndex, operation, authorId }) => {
+        if (socket.id === authorId || pageIndex !== state.page) {
             console.log("Ignoring message");
-        }else{
+        } else {
             renderOperation(operation)
         }
     })
-    
+
 }
 
-function drawUI(redraw = false) {
+function drawUI(redraw = false, newCanvas = false) {
+    if(newCanvas){
+        background(220);
+    }
+    noStroke();
+    textAlign(CENTER);
+    textSize(40);
+    fill(0, 0, 0);
+    text(`Face ${state.page + 1}`, width / 2, (height / 20));
     stroke(0, 0, 0);
     if (redraw) {
         noFill();
     } else {
         fill(255, 255, 255);
     }
+
+    triangle(lButtonSideLengths[0].x, lButtonSideLengths[0].y, lButtonSideLengths[1].x, lButtonSideLengths[1].y, lButtonSideLengths[2].x, lButtonSideLengths[2].y);
+
+    triangle(rButtonSideLengths[0].x, rButtonSideLengths[0].y, rButtonSideLengths[1].x, rButtonSideLengths[1].y, rButtonSideLengths[2].x, rButtonSideLengths[2].y);
+
     triangle(
         ogPoints[0],
         ogPoints[1],
@@ -81,7 +107,7 @@ function drawUI(redraw = false) {
         ogPoints[0] - (2 * (triangleOffsets[0] / 3)),
         ogPoints[1] + triangleOffsets[1]
     );
-    const storeHeight = 100/2;
+    const storeHeight = 100 / 2;
     const storeStart = createVector(ogPoints[0] - (2 * (triangleOffsets[0] / 3)), ogPoints[1] + triangleOffsets[1] + 50);
     rect(
         storeStart.x,
@@ -101,30 +127,21 @@ function drawUI(redraw = false) {
         switch (item) {
             case "Circle":
                 ellipseMode(CENTER);
-                ellipse(storeStart.x + (itemWidth * index) + (itemWidth / 2), storeStart.y + (storeHeight / 2), state.cursorSize);
+                ellipse(storeStart.x + (itemWidth * index) + (itemWidth / 2), storeStart.y + (storeHeight / 2), min(state.cursorSize, 24));
                 break;
             case "Square":
                 rectMode(CENTER);
-                rect(storeStart.x + (itemWidth * index) + (itemWidth / 2), storeStart.y + (storeHeight / 2), state.cursorSize, state.cursorSize);
+                rect(storeStart.x + (itemWidth * index) + (itemWidth / 2), storeStart.y + (storeHeight / 2), min(state.cursorSize, 24), min(state.cursorSize, 24));
                 rectMode(CORNER);
                 break;
             case "Star":
-                star(storeStart.x + (itemWidth * index) + (itemWidth / 2), storeStart.y + (storeHeight / 2), state.cursorSize* (3/7), state.cursorSize, 5);
+                star(storeStart.x + (itemWidth * index) + (itemWidth / 2), storeStart.y + (storeHeight / 2), min(state.cursorSize, 24) * (3 / 7), min(state.cursorSize, 24), 5);
                 break;
         }
         fill(255);
         stroke(0);
     });
-
-    //Draw Color Selector
-
-    /*for(var i = 1; i < 30; i += .03125) {
-        stroke(...HSVtoRGB(i*10, 100, 100));
-        line(storeStart.x+(i*16) + 50, storeStart.y - 40, storeStart.x+(i*16)+50, storeStart.y- 5 );
-    }*/
     image(img, storeStart.x, storeStart.y - 40, storeLength, 30);
-
-
     const sideLengths = [];
     sideLengths.push(
         dist(
@@ -161,9 +178,6 @@ function drawUI(redraw = false) {
         }
     }
 
-
-
-
     if (state.debug.touchBox) {
         fill(255, 0, 0, 10);
         stroke(255, 0, 0);
@@ -180,6 +194,17 @@ function mousePressed(event) {
         state.selectedColor = get(mouseX, mouseY);
         drawUI(true);
         return;
+    }
+    if (event.buttons == 1) {
+        if(collidePointPoly(mouseX, mouseY, lButtonSideLengths)) {
+            socket.emit("iGoTo", {currentPage: state.page, direction: "prev"})
+            return;
+        }
+        if(collidePointPoly(mouseX, mouseY, rButtonSideLengths)){
+            socket.emit("iGoTo", {currentPage: state.page, direction: "next"})
+            return;
+        }
+
     }
     brush(event.buttons);
 }
@@ -201,17 +226,18 @@ function mouseWheel(event) {
 }
 
 function keyPressed() {
+    console.log(state.cursorSize);
     //console.log(btoa(JSON.stringify(operations)));
 }
 
 function brush(button) {
     //console.log(button)
     if (collidePointPoly(mouseX, mouseY, triangleShape)) { // Drawing
-        const renderColor = button == 1 ? state.selectedColor : [255,255,255];
+        const renderColor = button == 1 ? state.selectedColor : [255, 255, 255];
         fill(...renderColor);
         stroke(...renderColor);
         //operations.push();
-        socket.emit("newOperation", {pageIndex: state.page, operation: {type: state.mode, w: state.cursorSize, h: state.cursorSize, drawFill: renderColor, pos: [mouseX, mouseY]}});
+        socket.emit("newOperation", { pageIndex: state.page, operation: { type: state.mode, w: state.cursorSize, h: state.cursorSize, drawFill: renderColor, pos: [mouseX, mouseY] } });
         switch (state.mode) {
             case 0: //circle
                 ellipse(mouseX, mouseY, state.cursorSize);
@@ -220,18 +246,18 @@ function brush(button) {
                 rect(mouseX, mouseY, state.cursorSize, state.cursorSize);
                 break;
             case 2:
-                star(mouseX, mouseY, state.cursorSize* (3/7), state.cursorSize, 5);
+                star(mouseX, mouseY, state.cursorSize * (3 / 7), state.cursorSize, 5);
                 break;
         }
     }
 
 }
 
-function renderOperation({type, w, h, drawFill, pos}) {
+function renderOperation({ type, w, h, drawFill, pos }) {
     //console.log(button)
     if (collidePointPoly(pos[0], pos[1], triangleShape)) { // Drawing
         fill(...drawFill);
-        stroke(...drawFill);  
+        stroke(...drawFill);
         switch (type) {
             case 0: //circle
                 ellipse(pos[0], pos[1], w);
@@ -240,7 +266,7 @@ function renderOperation({type, w, h, drawFill, pos}) {
                 rect(pos[0], pos[1], w, w);
                 break;
             case 2:
-                star(pos[0], pos[1], w* (3/7), w, 5);
+                star(pos[0], pos[1], w * (3 / 7), w, 5);
                 break;
         }
     }
