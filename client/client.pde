@@ -23,8 +23,8 @@ void draw() {
   if (s != lastSecond)
   {
     try {
-      //faces = loadJSONArray("https://drawmapper.herokuapp.com/api");
-      faces = loadJSONArray("http://localhost/api");
+      faces = loadJSONArray("https://drawmapper.herokuapp.com/api");
+      //faces = loadJSONArray("http://localhost/api");
       for (int f = 0; f < faces.size(); f++) {
         canvas[f].beginDraw();
         try {
